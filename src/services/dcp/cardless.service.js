@@ -9,7 +9,36 @@ const cardlessService = {
       pool = pools.dcp;
 
       const [rows] = await pool.query(
-        `select * from dcp_trade.trade_noncustomer tn order by tn.create_time desc;`
+        `select *
+  from (select rsvref_no,
+               messageid,
+               hostRequest,
+               case hostrequest when '00' then 'COUNTER'
+                                when '01' then 'MOBILE'
+                                when '02' then 'ATM' end hostrequest_desc,
+               transtype,
+               mapacctno,
+               ccy,
+               rsvamt,
+               descr,
+               feetype,
+               feeamt,
+               accountno,
+               tellerid,
+               phoneno,
+               create_time,
+               update_time,
+               status,
+               case status when '1' then 'Reservation'
+                           when '2' then 'Reversal'
+                           when '3' then 'Expired'
+                           when '4' then 'Unknown or fail'
+                           when '5' then 'Withdrawal'
+                           when '6' then 'Reversal Withdrawal' end     status_desc,
+               response_code,
+               response_message,
+               txgath
+          from trade_noncustomer a order by create_time desc)  trade `
       );
 
       // const exports = exportToExcel(

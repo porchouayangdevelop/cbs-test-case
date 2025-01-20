@@ -2,6 +2,7 @@ import express from "express";
 
 const app = express();
 
+import expressStatus from "express-status-monitor";
 import http from "http";
 import promClient from "prom-client";
 
@@ -31,6 +32,7 @@ app.use(
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(expressStatus());
 
 const envMode =
   process.env.NODE_ENV || "development" ? "development" : "production";
@@ -62,6 +64,9 @@ app.get("/", (req, res) => {
   res.send(`Hello from Node.js! Server: ${process.env.HOSTNAME}`);
 });
 
+const sts = expressStatus();
+app.get("/status", sts.pageRoute);
+
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
@@ -83,11 +88,14 @@ app.use(
 
 // initialize routes
 import batchRoutes from "./src/routes/batch.routes.js";
+import customerRoutes from "./src/routes/customer.routes.js";
 import dcpTradeRoutes from "./src/routes/dcp.routes.js";
 import exchangeRateRoutes from "./src/routes/exchangeRate.routes.js";
+
 exchangeRateRoutes(app);
 batchRoutes(app);
 dcpTradeRoutes(app);
+customerRoutes(app);
 
 console.log(
   `Core Banking System ${globalEnv.getBusinessMode()} business date is: ${await businessDate.getBusinessDates()}`
