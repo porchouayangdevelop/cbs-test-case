@@ -97,6 +97,11 @@ batchRoutes(app);
 dcpTradeRoutes(app);
 customerRoutes(app);
 
+//test
+import { CustomerService } from "./src/services/core/customer.service.js";
+
+CustomerService.getCustomerInfo();
+
 console.log(
   `Core Banking System ${globalEnv.getBusinessMode()} business date is: ${await businessDate.getBusinessDates()}`
 );

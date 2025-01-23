@@ -58,7 +58,7 @@ class QueryBuilder {
       const { type, tableName, alias, conditions, subQuery } = join;
       let joinTable = tableName;
       if (subQuery) {
-        joinTable = `(${subQuery.query}) AS $${alias}`;
+        joinTable = `(${subQuery.query}) AS ${alias}`;
         values.push(...subQuery.values);
       } else if (alias) {
         joinTable = `${tableName} AS ${alias}`;
@@ -423,9 +423,8 @@ class QueryBuilder {
         return {
           query: `CREATE OR REPLACE FUNCTION ${functionName}(${args
             .map((arg) => `${arg} ${typeof arg === "string" ? "TEXT" : "INT"}`)
-            .join(", ")}) RETURNS ${options.returnType} AS $$
-        ${options.functionBody}
-        $$ LANGUAGE plpgsql`,
+            .join(", ")}) RETURNS ${options.returnType} AS 
+        ${options.functionBody} LANGUAGE plpgsql`,
           values: [],
         };
 
@@ -739,8 +738,30 @@ class QueryBuilder {
   }
 
   buildDateDiffExpression(field) {
-    const { expression1, expression2, alias } = field;
-    let expr = `DATEDIFF(${expression1}, ${expression2})`;
+    const { date1, date2, until = "DAY", alias } = field;
+    let expr;
+    switch (until.toUpperCase()) {
+      case "SECOND":
+        expr = `TIMESTAMPDIFF(SECOND, ${date2}, ${date1})`;
+        break;
+      case "MINUTE":
+        expr = `TIMESTAMPDIFF(MINUTE, ${date2}, ${date1})`;
+        break;
+      case "HOUR":
+        expr = `TIMESTAMPDIFF(HOUR, ${date2}, ${date1})`;
+        break;
+      case "DAY":
+        expr = `DATEDIFF(${date1}, ${date2})`;
+        break;
+      case "MONTH":
+        expr = `TIMESTAMPDIFF(MONTH, ${date2}, ${date1})`;
+        break;
+      case "YEAR":
+        expr = `TIMESTAMPDIFF(YEAR, ${date2}, ${date1})`;
+        break;
+      default:
+        expr = `DATEDIFF(${date1}, ${date2})`;
+    }
     return alias ? `${expr} AS ${alias}` : expr;
   }
 
@@ -825,9 +846,6 @@ class QueryBuilder {
     SELECT COUNT(*) as count
     FROM ${this.tableName}
     `.trim();
-
-    console.log(`You're query: ${query}`);
-
     return { query, values: [] };
   }
 
@@ -921,6 +939,12 @@ class QueryBuilder {
               values.push(value[0], value[1]);
             }
             break;
+
+          case "IS NULL":
+          case "IS NOT NULL":
+            clauses.push(`${fields} ${operator}`);
+            break;
+
           default:
             clauses.push(`${fields} ${operator} ?`);
             values.push(value);
