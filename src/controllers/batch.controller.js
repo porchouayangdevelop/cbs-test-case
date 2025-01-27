@@ -20,6 +20,27 @@ const batchControllers = {
       });
     }
   },
+
+  async getBatches(req, res) {
+    try {
+      const { batNum } = req.params;
+      if (!batNum) {
+        return res.status(400).json({
+          error: `Missing required parameter: batNum in request ${batNum}`,
+        });
+      }
+
+      const batches = await jobService.getBatchEod(batNum);
+      res.status(200).json({
+        data: batches,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error: err,
+        message: "Internal Server Error",
+      });
+    }
+  },
 };
 
 export { batchControllers };

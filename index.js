@@ -101,6 +101,8 @@ customerRoutes(app);
 import { CustomerService } from "./src/services/core/customer.service.js";
 
 CustomerService.getCustomerInfo();
+// CustomerService.debitInfo();
+CustomerService.getCustomersCount();
 
 console.log(
   `Core Banking System ${globalEnv.getBusinessMode()} business date is: ${await businessDate.getBusinessDates()}`

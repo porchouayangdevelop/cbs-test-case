@@ -5,6 +5,7 @@ class MySQLQueryBuilder {
     // this.testResults = [];
   }
   init() {
+    this.withClauses = [];
     this.queryType = "query";
     this.params = [];
     this.tables = [];
@@ -128,6 +129,21 @@ class MySQLQueryBuilder {
     this.functions = functions;
     this.functionParams = params;
     return this;
+  }
+
+  addWithClause(name, selectBuilder) {
+    if (!name || typeof name !== "string") {
+      throw new Error("Invalid with clause name");
+    }
+
+    if (!(selectBuilder instanceof MySQLQueryBuilder)) {
+      throw new Error("selectBuilder must be an instance of MySQLQueryBuilder");
+    }
+
+    this.withClauses.push({
+      name: name,
+      selectBuilder: selectBuilder,
+    });
   }
 
   addTables(tableName, alias = null) {
@@ -487,16 +503,23 @@ class MySQLQueryBuilder {
   }
 
   addIf(conditions, thenValue, elseValue, alias) {
-    const ifStmt = {
-      type: "if",
-      conditions: conditions,
-      thenValue,
-      elseValue,
-      alias: alias,
-    };
-    this.caseStatements.push(ifStmt);
+    if (!alias) throw new Error("alias is required");
+
+    const ifStmt = `IF(${conditions}, ${thenValue}, ${elseValue}) AS ${alias}`;
+    this.fields.push(ifStmt);
     return this;
   }
+
+  addCoalesce(fields, alias) {
+    if (!Array.isArray(fields) || fields.length < 2) {
+      throw new Error("Fields must be an array of at least 2 elements");
+    }
+    if (!alias) throw new Error("alias is required");
+    const coalesceStr = `COALESCE(${fields.join(", ")}) AS ${alias}`;
+    this.fields.push(coalesceStr);
+    return this;
+  }
+
   _buildCaseStatements(caseStmt) {
     let caseStr = `CASE `;
     if (!caseStmt.searched && caseStmt.field) {
@@ -526,6 +549,8 @@ class MySQLQueryBuilder {
     }
 
     caseStr += ` END AS ${caseStmt.alias}`;
+    console.log(caseStr);
+
     return caseStr;
   }
   build() {
@@ -550,6 +575,7 @@ class MySQLQueryBuilder {
 
   buildQuery() {
     let parts = {
+      with: "",
       query: "",
       from: "",
       join: "",
@@ -562,7 +588,26 @@ class MySQLQueryBuilder {
       union: "",
       unionAll: "",
     };
-    // build select query
+
+    // build with queries (Optional)
+    if (this.withClauses.length > 0) {
+      const withQueries = this.withClauses.map((clause) => {
+        const subQuery = clause.query.build();
+        this.params.push(...subQuery.params);
+        return `${clause.name} as (${subQuery.query})`;
+      });
+      parts.with = `WITH ${withQueries.join(", ")}`;
+    }
+
+    // build case when
+    if (this.caseStatements.length > 0) {
+      this.caseStatements.forEach((cs) => {
+        this.fields.push(this._buildCaseStatements(cs));
+        console.log(cs);
+      });
+    }
+
+    // build select 1query
     if (this.count) {
       parts.query = `SELECT COUNT(*) AS total`;
     } else {
@@ -578,18 +623,14 @@ class MySQLQueryBuilder {
       .map((tb) => `${tb.name}${tb.alias ? ` AS ${tb.alias}` : ""} `)
       .join(", ")}`;
 
-    // build case when
-    if (this.caseStatements.length > 0) {
-      this.caseStatements.forEach((cs) => {
-        this.fields.push(this._buildCaseStatements(cs));
-        console.log(cs);
-      });
-      this.fields = [...new Set(this.fields)]; // remove duplicates
-
-      parts.query = `${parts.query} ${this.fields.join(", ")}`;
-    }
-
     // build if statements
+    // if (this.ifStatements.length > 0) {
+    //   this.ifStatements.forEach((ifStmt) => {
+    //     this.fields.push(this._buildIfStatements(ifStmt));
+    //   });
+    //   this.fields = [...new Set(this.fields)]; // remove duplicates
+    //   parts.query = `${parts.query} ${this.fields.join(", ")}`;
+    // }
 
     // build union queries (Optional)
 
@@ -684,6 +725,7 @@ class MySQLQueryBuilder {
 
     //combine parts
     const query = [
+      parts.with,
       parts.query,
       parts.from,
       parts.join,
@@ -699,8 +741,8 @@ class MySQLQueryBuilder {
       .filter((part) => part)
       .join(" ");
 
-    console.log(query, this.params);
     console.log(parts);
+    console.log(this.params);
 
     return {
       query,
@@ -711,6 +753,22 @@ class MySQLQueryBuilder {
         parameterCount: this.params.length,
       },
     };
+  }
+  _buildIfStatements(query, params) {
+    const field = query.field;
+    const value = query.value;
+    const operator = query.operator;
+    const result = query.result;
+
+    let condition;
+    if (typeof value === "string") {
+      condition = `${field} ${operator}?`;
+      this.params.push(value);
+    } else {
+      condition = `${field} ${operator} ${value}`;
+    }
+
+    return `CASE WHEN ${condition} THEN ${result} END`;
   }
 
   isCount() {
@@ -726,9 +784,10 @@ class MySQLQueryBuilder {
     if (!this.procedures) {
       throw new Error("Procedures must be provided");
     }
-    const placeholders = this.procedureParams.map(() => "?").join(", ");
 
-    const query = `CALL ${this.procedures} (${placeholders})`;
+    const query = `CALL ${this.procedures} (${this.procedureParams
+      .map(() => "?")
+      .join(", ")})`;
     return {
       query,
       params: this.procedureParams,

@@ -1,4 +1,13 @@
+import path from "path";
 import { createPools } from "../../configs/db.config.js";
+import MySQLQueryBuilder from "../../utils/MySQLQueryBuilder.js";
+import { DocxExporter } from "../../utils/docxExport.js";
+
+const docxExport = new DocxExporter({
+  exportDir: path.join(process.cwd(), "resources", "exports"),
+});
+
+const builder = new MySQLQueryBuilder();
 const jobService = {
   async getJobDetails() {
     let pool;
@@ -38,6 +47,51 @@ const jobService = {
       return rows;
     } catch (error) {
       console.log(`Error getting jobs for ${batNum}: ${error}`);
+    }
+  },
+
+  async getBatchEod(batNum) {
+    let pool;
+    try {
+      pool = await createPools();
+      pool = pool.jgp;
+
+      const { query, params } = builder
+        .setType("procedure")
+        .setProcedures("proc_get_batch_eod", [batNum])
+        .build();
+      const [rows] = await pool.execute(query, params);
+
+      const result = rows[0].map((item, index) => {
+        return {
+          id: index + 1,
+          Module: item.module,
+          // batNum: item.batNum,
+          batchDate: item.batch_date,
+          StartTime: item.start_time,
+          EndTime: item.end_time,
+          Status: item.status.toLowerCase(),
+          Remarks: "",
+        };
+      });
+
+      const data = {
+        batDate: result[0].batchDate,
+        FullName: "Porchouayang VAJONG",
+        StartTime: result[0].StartTime,
+        EndTime:
+          result[0].Module === "Report"
+            ? result[0].EndTime
+            : "....................",
+        statuses: result,
+      };
+
+      docxExport.exportToDocx(data);
+      // console.log(result);
+
+      return rows[0];
+    } catch (error) {
+      console.error(error);
     }
   },
 };
