@@ -549,7 +549,7 @@ class MySQLQueryBuilder {
     }
 
     caseStr += ` END AS ${caseStmt.alias}`;
-    console.log(caseStr);
+    // console.log(caseStr);
 
     return caseStr;
   }
@@ -583,8 +583,8 @@ class MySQLQueryBuilder {
       groupBy: "",
       having: "",
       orderBy: "",
-      limit: "",
-      offset: "",
+      // limit: "",
+      // offset: "",
       union: "",
       unionAll: "",
     };
@@ -603,7 +603,7 @@ class MySQLQueryBuilder {
     if (this.caseStatements.length > 0) {
       this.caseStatements.forEach((cs) => {
         this.fields.push(this._buildCaseStatements(cs));
-        console.log(cs);
+        // console.log(cs);
       });
     }
 
@@ -714,14 +714,14 @@ class MySQLQueryBuilder {
     }
 
     // build limit and offset clauses (Optional)
-    if (this.limit !== null) {
-      parts.limit = `LIMIT ?`;
-      this.params.push(this.limit);
-    }
-    if (this.offset !== null) {
-      parts.offset = `OFFSET ?`;
-      this.params.push(this.offset);
-    }
+    // if (this.limit !== null) {
+    //   parts.limit = `LIMIT ?`;
+    //   this.params.push(this.limit);
+    // }
+    // if (this.offset !== null) {
+    //   parts.offset = `OFFSET ?`;
+    //   this.params.push(this.offset);
+    // }
 
     //combine parts
     const query = [
@@ -733,16 +733,16 @@ class MySQLQueryBuilder {
       parts.groupBy,
       parts.having,
       parts.orderBy,
-      parts.limit,
-      parts.offset,
+      // parts.limit,
+      // parts.offset,
       parts.union,
       parts.unionAll,
     ]
       .filter((part) => part)
       .join(" ");
 
-    console.log(parts);
-    console.log(this.params);
+    // console.log(parts);
+    // console.log(this.params);
 
     return {
       query,

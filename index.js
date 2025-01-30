@@ -86,23 +86,29 @@ app.use(
   express.static(path.join(process.cwd(), "resources", "exports"))
 );
 
+app.use(
+  "/download",
+  express.static(
+    path.join(process.cwd(), "resources", "downloads", "signature")
+  )
+);
+
 // initialize routes
 import batchRoutes from "./src/routes/batch.routes.js";
 import customerRoutes from "./src/routes/customer.routes.js";
+import customerImageRoutes from "./src/routes/customerImage.routes.js";
 import dcpTradeRoutes from "./src/routes/dcp.routes.js";
 import exchangeRateRoutes from "./src/routes/exchangeRate.routes.js";
+import loanRoutes from "./src/routes/loans.routes.js";
+import sshRoutes from "./src/routes/ssh.routes.js";
 
 exchangeRateRoutes(app);
 batchRoutes(app);
 dcpTradeRoutes(app);
 customerRoutes(app);
-
-//test
-import { CustomerService } from "./src/services/core/customer.service.js";
-
-CustomerService.getCustomerInfo();
-// CustomerService.debitInfo();
-CustomerService.getCustomersCount();
+loanRoutes(app);
+sshRoutes(app);
+customerImageRoutes(app);
 
 console.log(
   `Core Banking System ${globalEnv.getBusinessMode()} business date is: ${await businessDate.getBusinessDates()}`

@@ -41,6 +41,22 @@ const batchControllers = {
       });
     }
   },
+
+  async process_pwc(req, res) {
+    try {
+      const { batNum } = req.params;
+      const { fullName, remarks } = req.body;
+      const result = await jobService.cbsPwcDocument(fullName, batNum, remarks);
+      res.status(200).json({
+        data: result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: error,
+        message: "Internal Server Error",
+      });
+    }
+  },
 };
 
 export { batchControllers };

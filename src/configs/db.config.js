@@ -17,7 +17,7 @@ const createPools = async () => {
     const appConfig = getConfig(globalEnv.getEnvironment());
 
     const pools = {};
-    const databases = ["core", "ods", "jgp", "dcp"];
+    const databases = ["core", "ods", "jgp", "dcp", "cbs_pwc", "hbs"];
 
     for (const db of databases) {
       pools[db] = mysql.createPool({

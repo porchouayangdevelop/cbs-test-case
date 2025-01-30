@@ -2,6 +2,7 @@ import path from "path";
 import { createPools } from "../../configs/db.config.js";
 import MySQLQueryBuilder from "../../utils/MySQLQueryBuilder.js";
 import { DocxExporter } from "../../utils/docxExport.js";
+import businessDate from "../core/business_date.service.js";
 
 const docxExport = new DocxExporter({
   exportDir: path.join(process.cwd(), "resources", "exports"),
@@ -70,26 +71,94 @@ const jobService = {
           batchDate: item.batch_date,
           StartTime: item.start_time,
           EndTime: item.end_time,
-          Status: item.status.toLowerCase(),
-          Remarks: "",
+          Status: item.status,
+          // Remarks: "",
         };
       });
 
-      const data = {
-        batDate: result[0].batchDate,
-        FullName: "Porchouayang VAJONG",
-        StartTime: result[0].StartTime,
-        EndTime:
-          result[0].Module === "Report"
-            ? result[0].EndTime
-            : "....................",
-        statuses: result,
-      };
+      // const data = {
+      //   batDate: result[0].batchDate,
+      //   FullName: "Porchouayang VAJONG",
+      //   StartTime: result[0].StartTime,
+      //   EndTime:
+      //     result[0].Module === "Report"
+      //       ? result[0].EndTime
+      //       : "....................",
+      //   statuses: result,
+      // };
 
-      docxExport.exportToDocx(data);
+      // docxExport.exportToDocx(data);
       // console.log(result);
 
-      return rows[0];
+      return result;
+    } catch (error) {
+      console.error(error);
+    }
+  },
+
+  async getMaxId() {
+    let pool;
+    try {
+      let pools = await createPools();
+      pool = pools.cbs_pwc;
+      const [rows] = await pool.execute(
+        `select max(id) as maxId from pwc_documentation;`
+      );
+      return rows[0].maxId;
+    } catch (error) {
+      console.error(error);
+    }
+  },
+
+  async cbsPwcDocument(fullName, batNum, descriptions, remarks) {
+    let pool;
+    let bTime;
+    let eTime;
+    let output, output1;
+    try {
+      pool = await createPools();
+      pool = pool.cbs_pwc;
+      const maxId = await this.getMaxId();
+
+      const result = await this.getBatchEod(batNum);
+      bTime = result[0].Module === "Core" ? result[0].StartTime : "";
+      eTime = result[0].Module === "Report" ? result[0].EndTime : "";
+      const { query, params } = builder
+        .setType("procedure")
+        .setProcedures("proc_pwc_documentation", [
+          `${fullName}`,
+          `${bTime}`,
+          `${eTime}`,
+          `${await businessDate.getBusinessDates()}`,
+        ])
+        .build();
+      output = await pool.execute(query, params);
+      console.info(output);
+      for (let i in result) {
+        const el = result[i];
+        const { query, params } = builder
+          .setType("procedure")
+          .setProcedures("proc_process_pwc_details", [
+            `${output[0].insertId}`,
+            `${el.Module}`,
+            `${batNum}`,
+            `${result[0].batchDate}`,
+            `${el.StartTime}`,
+            `${el.EndTime}`,
+            `${descriptions}`,
+            `${el.Status}`,
+            `${remarks}`,
+          ])
+          .build();
+
+        output1 = await pool.execute(query, params);
+      }
+
+      console.info(output1);
+      return {
+        id: output[0].insertId,
+        success: true,
+      };
     } catch (error) {
       console.error(error);
     }

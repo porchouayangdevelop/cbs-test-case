@@ -36,6 +36,20 @@ const appConfig = {
       password: process.env.DCP_PASSWORD || "Dba23@Apb2024",
       database: process.env.DCP_DBNAME || "dcp_trade",
     },
+    hbs: {
+      host: process.env.HBS_HOST || "10.151.145.186",
+      port: parseInt(process.env.DB_PORT) || parseInt(3306),
+      user: process.env.HBS_USER || "hbs_dcore_fts",
+      password: process.env.HBS_PASSWORD || "UatDcore_fts@2024",
+      database: process.env.HBS_DBNAME || "hbs_dcore_fts",
+    },
+    cbs_pwc: {
+      host: process.env.CBS_PWC_HOST || "10.1.11.179",
+      port: parseInt(process.env.DB_PORT) || parseInt(3306),
+      user: process.env.CBS_PWC_USER || "admin",
+      password: process.env.CBS_PWC_PASSWORD || "cbs@2024",
+      database: process.env.CBS_PWC_DBNAME || "cbs_eod_history",
+    },
   },
   production: {
     core: {
